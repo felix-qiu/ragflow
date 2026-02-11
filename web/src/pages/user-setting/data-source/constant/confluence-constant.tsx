@@ -12,7 +12,31 @@ export const confluenceConstant = (t: TFunction) => [
     label: 'Confluence Access Token',
     name: 'config.credentials.confluence_access_token',
     type: FormFieldType.Password,
-    required: true,
+    required: false,
+    tooltip:
+      'Use Personal Access Token for newer Confluence versions. Leave empty if using password authentication.',
+  },
+  {
+    label: 'Confluence Password',
+    name: 'config.credentials.confluence_password',
+    type: FormFieldType.Password,
+    required: false,
+    tooltip:
+      "Use password for Confluence Server versions that don't support tokens (e.g., 6.13.21). Required if Access Token is not provided.",
+    customValidate: (val: string, formValues: any) => {
+      const accessToken =
+        formValues?.config?.credentials?.confluence_access_token;
+      const isCloud = formValues?.config?.is_cloud;
+      // Password is required for non-cloud if no access token is provided
+      if (!isCloud && !accessToken && !val) {
+        return 'Either Access Token or Password is required for Confluence Server';
+      }
+      return true;
+    },
+    shouldRender: (formValues: any) => {
+      // Show password field for non-cloud Confluence
+      return !formValues?.config?.is_cloud;
+    },
   },
   {
     label: 'Wiki Base URL',

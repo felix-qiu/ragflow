@@ -267,11 +267,21 @@ class OnyxConfluence:
                         **merged_kwargs,
                     )
                 else:
-                    confluence_client_with_minimal_retries = Confluence(
-                        url=url,
-                        token=credentials["confluence_access_token"],
-                        **merged_kwargs,
-                    )
+                    # Check if using password authentication
+                    if "confluence_password" in credentials:
+                        logging.info("Probing Confluence Server with username/password.")
+                        confluence_client_with_minimal_retries = Confluence(
+                            url=url,
+                            username=credentials["confluence_username"],
+                            password=credentials["confluence_password"],
+                            **merged_kwargs,
+                        )
+                    else:
+                        confluence_client_with_minimal_retries = Confluence(
+                            url=url,
+                            token=credentials["confluence_access_token"],
+                            **merged_kwargs,
+                        )
 
             # This call sometimes hangs indefinitely, so we run it in a timeout
             spaces = run_with_timeout(
@@ -328,22 +338,34 @@ class OnyxConfluence:
             url = f"https://api.atlassian.com/ex/confluence/{credentials['cloud_id']}"
             confluence = Confluence(url=url, oauth2=oauth2_dict, **kwargs)
         else:
-            logging.info(
-                f"Connecting to Confluence with Personal Access Token as user: {credentials['confluence_username']}"
-            )
-            if self._is_cloud:
+            # Check if using password authentication (for older Confluence Server versions)
+            if "confluence_password" in credentials:
+                logging.info(
+                    f"Connecting to Confluence Server with username/password as user: {credentials['confluence_username']}"
+                )
                 confluence = Confluence(
                     url=self._url,
                     username=credentials["confluence_username"],
-                    password=credentials["confluence_access_token"],
+                    password=credentials["confluence_password"],
                     **kwargs,
                 )
             else:
-                confluence = Confluence(
-                    url=self._url,
-                    token=credentials["confluence_access_token"],
-                    **kwargs,
+                logging.info(
+                    f"Connecting to Confluence with Personal Access Token as user: {credentials['confluence_username']}"
                 )
+                if self._is_cloud:
+                    confluence = Confluence(
+                        url=self._url,
+                        username=credentials["confluence_username"],
+                        password=credentials["confluence_access_token"],
+                        **kwargs,
+                    )
+                else:
+                    confluence = Confluence(
+                        url=self._url,
+                        token=credentials["confluence_access_token"],
+                        **kwargs,
+                    )
 
         return confluence
 
