@@ -12,7 +12,8 @@ export const useChangeDocumentParser = () => {
   const { setDocumentParser, loading } = useSetDocumentParser();
   const { setDocumentPipelineParser, loading: pipelineParserLoading } =
     useSetDocumentPipelineParser();
-  const [record, setRecord] = useState<IDocumentInfo>({} as IDocumentInfo);
+  const [records, setRecords] = useState<IDocumentInfo[]>([]);
+  const record = records[0] ?? ({} as IDocumentInfo);
 
   const {
     visible: changeParserVisible,
@@ -22,13 +23,14 @@ export const useChangeDocumentParser = () => {
 
   const onChangeParserOk = useCallback(
     async (parserConfigInfo: IChangeParserRequestBody) => {
-      if (record?.id && record?.dataset_id) {
+      const documentIds = records.map((item) => item.id).filter(Boolean);
+      if (documentIds.length > 0 && record?.dataset_id) {
         // The Go document endpoint takes `parser_id` and a pipeline-shaped
         // parser_config; the Python one keeps the legacy payload shape.
         const common = {
           parserId: parserConfigInfo.parser_id,
           pipelineId: parserConfigInfo.pipeline_id || '',
-          documentId: record?.id,
+          documentIds,
           datasetId: record?.dataset_id,
           parserConfig: parserConfigInfo.parser_config,
         };
@@ -46,7 +48,7 @@ export const useChangeDocumentParser = () => {
       }
     },
     [
-      record?.id,
+      records,
       record?.dataset_id,
       setDocumentParser,
       setDocumentPipelineParser,
@@ -55,8 +57,8 @@ export const useChangeDocumentParser = () => {
   );
 
   const handleShowChangeParserModal = useCallback(
-    (row: IDocumentInfo) => {
-      setRecord(row);
+    (rows: IDocumentInfo | IDocumentInfo[]) => {
+      setRecords(Array.isArray(rows) ? rows : [rows]);
       showChangeParserModal();
     },
     [showChangeParserModal],

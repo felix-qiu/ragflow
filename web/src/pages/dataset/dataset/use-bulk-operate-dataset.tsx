@@ -16,6 +16,7 @@ import {
   LucideToggleLeft,
   LucideToggleRight,
   LucideTrash2,
+  LucideWorkflow,
 } from 'lucide-react';
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -150,6 +151,11 @@ export function useBulkOperateDataset({
       id: 'batch-metadata',
       label: t('knowledgeDetails.metadata.metadata'),
       icon: <LucideCylinder />,
+    },
+    {
+      id: 'batch-parser',
+      label: t('knowledgeDetails.batchDataPipelineTitle'),
+      icon: <LucideWorkflow />,
     },
     {
       id: 'delete',

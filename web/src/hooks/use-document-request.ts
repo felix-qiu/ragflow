@@ -537,6 +537,44 @@ export const useSaveDocumentName = () => {
   return { loading, saveName: mutateAsync, data };
 };
 
+const documentParserUpdateConcurrency = 5;
+
+async function updateDocumentParsers(
+  datasetId: string,
+  documentIds: string[],
+  updateData: Record<string, unknown>,
+) {
+  if (documentIds.length === 0) {
+    return 400;
+  }
+
+  let failureCode = 0;
+  for (
+    let offset = 0;
+    offset < documentIds.length;
+    offset += documentParserUpdateConcurrency
+  ) {
+    const batch = documentIds.slice(
+      offset,
+      offset + documentParserUpdateConcurrency,
+    );
+    const results = await Promise.allSettled(
+      batch.map((documentId) =>
+        changeDocumentParser(datasetId, documentId, updateData),
+      ),
+    );
+    for (const result of results) {
+      if (result.status === 'rejected') {
+        failureCode ||= 500;
+      } else if (result.value.data.code !== 0) {
+        failureCode ||= result.value.data.code;
+      }
+    }
+  }
+
+  return failureCode;
+}
+
 export const useSetDocumentParser = () => {
   const queryClient = useQueryClient();
 
@@ -550,12 +588,14 @@ export const useSetDocumentParser = () => {
       parserId,
       pipelineId,
       documentId,
+      documentIds,
       datasetId,
       parserConfig,
     }: {
       parserId: string;
       pipelineId: string;
-      documentId: string;
+      documentId?: string;
+      documentIds?: string[];
       datasetId: string;
       parserConfig?: IChangeParserConfigRequestBody;
     }) => {
@@ -571,19 +611,16 @@ export const useSetDocumentParser = () => {
         updateData.parser_config = extractParserConfigExt(parserConfig);
       }
 
-      const { data } = await changeDocumentParser(
-        datasetId,
-        documentId,
-        updateData,
-      );
-      if (data.code === 0) {
+      const ids = documentIds ?? (documentId ? [documentId] : []);
+      const code = await updateDocumentParsers(datasetId, ids, updateData);
+      if (code === 0) {
         queryClient.invalidateQueries({
           queryKey: DocumentKeys.all(),
         });
 
         message.success(i18n.t('message.modified'));
       }
-      return data.code;
+      return code;
     },
   });
 
@@ -611,13 +648,15 @@ export const useSetDocumentPipelineParser = () => {
       pipelineId,
       parseType,
       documentId,
+      documentIds,
       datasetId,
       parserConfig,
     }: {
       parserId: string;
       pipelineId: string;
       parseType?: number;
-      documentId: string;
+      documentId?: string;
+      documentIds?: string[];
       datasetId: string;
       parserConfig?: IChangeParserConfigRequestBody;
     }) => {
@@ -636,19 +675,16 @@ export const useSetDocumentPipelineParser = () => {
           : extractParserConfigExt(parserConfig);
       }
 
-      const { data } = await changeDocumentParser(
-        datasetId,
-        documentId,
-        updateData,
-      );
-      if (data.code === 0) {
+      const ids = documentIds ?? (documentId ? [documentId] : []);
+      const code = await updateDocumentParsers(datasetId, ids, updateData);
+      if (code === 0) {
         queryClient.invalidateQueries({
           queryKey: DocumentKeys.all(),
         });
 
         message.success(i18n.t('message.modified'));
       }
-      return data.code;
+      return code;
     },
   });
 

@@ -20,18 +20,22 @@ import {
 } from '@/hooks/logic-hooks/use-row-selection';
 import { useFetchDocumentList } from '@/hooks/use-document-request';
 import { LucidePlus } from 'lucide-react';
-import { useEffect } from 'react';
+import { useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { MetadataType } from '../components/metedata/constant';
 import { useManageMetadata } from '../components/metedata/hooks/use-manage-modal';
 import { ManageMetadataModal } from '../components/metedata/manage-modal';
 import { useKnowledgeBaseContext } from '../contexts/knowledge-base-context';
+import { ChangeParserDialog } from './change-parser-dialog';
+import { DocumentType, RunningStatus } from './constant';
 import { DatasetTable } from './dataset-table';
 import { ReparseDialog } from './reparse-dialog';
 import { useBulkOperateDataset } from './use-bulk-operate-dataset';
+import { useChangeDocumentParser } from './use-change-document-parser';
 import { useCreateEmptyDocument } from './use-create-empty-document';
 import { useSelectDatasetFilters } from './use-select-filters';
 import { useHandleUploadDocument } from './use-upload-document';
+import { toast } from 'sonner';
 
 export default function Dataset() {
   const { t } = useTranslation();
@@ -97,6 +101,34 @@ export default function Dataset() {
     documents,
   );
 
+  const {
+    changeParserLoading: batchChangeParserLoading,
+    onChangeParserOk: onBatchChangeParserOk,
+    changeParserVisible: batchChangeParserVisible,
+    hideChangeParserModal: hideBatchChangeParserModal,
+    showChangeParserModal: showBatchChangeParserModal,
+    changeParserRecord: batchChangeParserRecord,
+  } = useChangeDocumentParser();
+
+  const handleBatchChangeParser = useCallback(() => {
+    const selectedDocuments = documents.filter(
+      (document) =>
+        selectedRowKeys.includes(document.id) &&
+        document.type !== DocumentType.Virtual &&
+        document.run !== RunningStatus.RUNNING,
+    );
+
+    if (selectedDocuments.length === 0) {
+      toast.error(t('knowledgeDetails.noDocumentsAvailableForPipeline'));
+      return;
+    }
+
+    if (selectedDocuments.length < selectedRowKeys.length) {
+      toast.warning(t('knowledgeDetails.batchPipelineSkipped'));
+    }
+    showBatchChangeParserModal(selectedDocuments);
+  }, [documents, selectedRowKeys, showBatchChangeParserModal, t]);
+
   const handleAddMetadataWithDocuments = () => {
     showManageMetadataModal({
       type: MetadataType.Manage,
@@ -127,6 +159,12 @@ export default function Dataset() {
       return {
         ...item,
         onClick: handleAddMetadataWithDocuments,
+      };
+    }
+    if (item.id === 'batch-parser') {
+      return {
+        ...item,
+        onClick: handleBatchChangeParser,
       };
     }
     return item;
@@ -259,6 +297,15 @@ export default function Dataset() {
             visible={reparseDialogVisible}
             hideModal={hideReparseDialogModal}
           ></ReparseDialog>
+        )}
+        {batchChangeParserVisible && (
+          <ChangeParserDialog
+            record={batchChangeParserRecord}
+            visible={batchChangeParserVisible}
+            onOk={onBatchChangeParserOk}
+            hideModal={hideBatchChangeParserModal}
+            loading={batchChangeParserLoading}
+          />
         )}
       </CardContent>
     </Card>
