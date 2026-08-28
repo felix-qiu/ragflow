@@ -21,6 +21,7 @@ export function useChatSettingSchema() {
   const promptConfigSchema = z.object({
     quote: z.boolean(),
     keyword: z.boolean(),
+    use_kg: z.boolean().default(false),
     tts: z.boolean(),
     empty_response: z.string().optional(),
     prologue: z.string().optional(),

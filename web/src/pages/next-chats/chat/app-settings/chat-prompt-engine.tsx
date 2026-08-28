@@ -122,6 +122,11 @@ export function ChatPromptEngine({ prefix = '' }: ChatPromptEngineProps) {
           tooltip={t('chat.keywordTip')}
         ></SwitchFormField>
         <SwitchFormField
+          name={prefixName(prefix, 'prompt_config.use_kg')}
+          label={t('chat.useKnowledgeGraph')}
+          tooltip={t('chat.useKnowledgeGraphTip')}
+        ></SwitchFormField>
+        <SwitchFormField
           name={prefixName(prefix, 'prompt_config.tts')}
           label={t('chat.tts')}
           tooltip={t('chat.ttsTip')}

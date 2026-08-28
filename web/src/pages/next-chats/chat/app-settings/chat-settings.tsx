@@ -60,6 +60,7 @@ export function ChatSettings({ hasSingleChatBox }: ChatSettingsProps) {
       prompt_config: {
         quote: true,
         keyword: false,
+        use_kg: false,
         tts: false,
         refine_multiturn: true,
         system: '',
@@ -145,6 +146,7 @@ export function ChatSettings({ hasSingleChatBox }: ChatSettingsProps) {
       ...data,
       prompt_config: {
         ...data.prompt_config,
+        use_kg: data.prompt_config?.use_kg ?? false,
         web_search_provider: getWebSearchProvider(data.prompt_config),
         reference_metadata: normalizedReferenceMetadata,
       },
