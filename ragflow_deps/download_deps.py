@@ -172,7 +172,7 @@ if __name__ == "__main__":
         with tarfile.open(archive_path) as tf:
             tf.extractall(target)
 
-    local_dir = os.path.abspath("nltk_data")
+    local_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "nltk_data")
     for data in ["wordnet", "punkt", "punkt_tab"]:
         print(f"Downloading nltk {data}...")
         nltk.download(data, download_dir=local_dir)

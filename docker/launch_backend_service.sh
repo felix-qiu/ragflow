@@ -48,8 +48,16 @@ load_env_file
 export http_proxy=""; export https_proxy=""; export no_proxy=""; export HTTP_PROXY=""; export HTTPS_PROXY=""; export NO_PROXY=""
 export PYTHONPATH=$(pwd)
 
-export LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu/
-JEMALLOC_PATH=$(pkg-config --variable=libdir jemalloc)/libjemalloc.so
+JEMALLOC_PATH=""
+if [[ "$(uname -s)" == "Linux" ]] && command -v pkg-config >/dev/null 2>&1; then
+  JEMALLOC_LIBDIR="$(pkg-config --variable=libdir jemalloc 2>/dev/null || true)"
+  if [[ -n "$JEMALLOC_LIBDIR" && -f "$JEMALLOC_LIBDIR/libjemalloc.so" ]]; then
+    export LD_LIBRARY_PATH="/usr/lib/x86_64-linux-gnu/${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+    JEMALLOC_PATH="$JEMALLOC_LIBDIR/libjemalloc.so"
+  else
+    echo "jemalloc is unavailable; starting without LD_PRELOAD."
+  fi
+fi
 
 PY=python3
 
@@ -105,8 +113,10 @@ task_exe(){
         echo "Starting $task_name (Attempt $((retry_count+1)))"
         if [[ "${API_PROXY_SCHEME}" == "go" ]]; then
             "${task_cmd[@]}"
+        elif [[ -n "$JEMALLOC_PATH" ]]; then
+            LD_PRELOAD="$JEMALLOC_PATH" "${task_cmd[@]}"
         else
-            LD_PRELOAD=$JEMALLOC_PATH "${task_cmd[@]}"
+            "${task_cmd[@]}"
         fi
         EXIT_CODE=$?
         if [ $EXIT_CODE -eq 0 ]; then
@@ -215,7 +225,7 @@ ensure_db_init() {
 
 run_mysql_migrations() {
     local db_type="${DB_TYPE:-mysql}"
-    db_type="${db_type,,}"
+    db_type="$(printf '%s' "$db_type" | tr '[:upper:]' '[:lower:]')"
     if [ "$db_type" = "gaussdb" ] || [ "$db_type" = "gauss" ]; then
         # This migration script contains MySQL-only SQL and cannot run against
         # a GaussDB metadata database.
